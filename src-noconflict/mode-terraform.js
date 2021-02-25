@@ -1,4 +1,4 @@
-ace.define("ace/mode/terraform_highlight_rules",["require","exports","module","ace/lib/oop","ace/mode/text_highlight_rules"], function (require, exports, module) {
+ace.define("ace/mode/terraform_highlight_rules",[], function (require, exports, module) {
 "use strict";
 
 var oop = require("../lib/oop");
@@ -35,7 +35,7 @@ var TerraformHighlightRules = function () {
             },
             {
                 token: "language.support.class",
-                regex: "\\b(timeouts|provider|connection|provisioner|lifecycleprovider|atlas)\\b"
+                regex: "\\b(timeouts|provider|connection|provisioner|lifecycleprovider|atlas|dynamic)\\b"
             },
 
             {
@@ -53,7 +53,7 @@ var TerraformHighlightRules = function () {
             },
             {
                 token: "storage.function.terraform",
-                regex: "^\\s*(locals|terraform)\\s*{"
+                regex: "^\\s*(locals|terraform)\\s"
             },
             {
                 token: "paren.lparen",
@@ -181,7 +181,7 @@ oop.inherits(TerraformHighlightRules, TextHighlightRules);
 exports.TerraformHighlightRules = TerraformHighlightRules;
 });
 
-ace.define("ace/mode/folding/cstyle",["require","exports","module","ace/lib/oop","ace/range","ace/mode/folding/fold_mode"], function(require, exports, module) {
+ace.define("ace/mode/folding/cstyle",[], function(require, exports, module) {
 "use strict";
 
 var oop = require("../../lib/oop");
@@ -321,7 +321,7 @@ oop.inherits(FoldMode, BaseFoldMode);
 
 });
 
-ace.define("ace/mode/matching_brace_outdent",["require","exports","module","ace/range"], function(require, exports, module) {
+ace.define("ace/mode/matching_brace_outdent",[], function(require, exports, module) {
 "use strict";
 
 var Range = require("../range").Range;
@@ -361,12 +361,13 @@ var MatchingBraceOutdent = function() {};
 exports.MatchingBraceOutdent = MatchingBraceOutdent;
 });
 
-ace.define("ace/mode/terraform",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/terraform_highlight_rules","ace/mode/behaviour/cstyle","ace/mode/folding/cstyle","ace/mode/matching_brace_outdent"], function (require, exports, module) {
+ace.define("ace/mode/terraform",[], function (require, exports, module) {
 "use strict";
 
 var oop = require("../lib/oop");
 var TextMode = require("./text").Mode;
 var TerraformHighlightRules = require("./terraform_highlight_rules").TerraformHighlightRules;
+var WorkerClient = require("../worker/worker_client").WorkerClient;
 var CstyleBehaviour = require("./behaviour/cstyle").CstyleBehaviour;
 var CStyleFoldMode = require("./folding/cstyle").FoldMode;
 var MatchingBraceOutdent = require("./matching_brace_outdent").MatchingBraceOutdent;
@@ -383,14 +384,52 @@ oop.inherits(Mode, TextMode);
 
 
 (function () {
-    this.lineCommentStart = ["#", "//"];
+
+    this.lineCommentStart = "//";
     this.blockComment = {start: "/*", end: "*/"};
+    
+    this.getNextLineIndent = function(state, line, tab) {
+        var indent = this.$getIndent(line);
+
+        if (state == "start") {
+            var match = line.match(/^.*[\{\(\[]\s*$/);
+            if (match) {
+                indent += tab;
+            }
+        }
+
+        return indent;
+    };
+
+    this.checkOutdent = function(state, line, input) {
+        return this.$outdent.checkOutdent(line, input);
+    };
+
+    this.autoOutdent = function(state, doc, row) {
+        this.$outdent.autoOutdent(doc, row);
+    };
+
+    this.createWorker = function(session) {
+        var worker = new WorkerClient(["ace"], "ace/mode/terraform_worker", "TerraformWorker");
+        worker.attachToDocument(session.getDocument());
+
+        worker.on("annotate", function(e) {
+            session.setAnnotations(e.data);
+        });
+
+        worker.on("terminate", function() {
+            session.clearAnnotations();
+        });
+
+        return worker;
+    };
     
     this.$id = "ace/mode/terraform";
 }).call(Mode.prototype);
 
 exports.Mode = Mode;
-});                (function() {
+});
+                (function() {
                     ace.require(["ace/mode/terraform"], function(m) {
                         if (typeof module == "object" && typeof exports == "object" && module) {
                             module.exports = m;
