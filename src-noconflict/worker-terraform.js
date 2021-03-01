@@ -1745,9 +1745,9 @@ ace.define("ace/mode/terraform/terraform_parse",[], function(require, exports, m
                         else if (ch === '}' && bracketNesting>0)
                             braceNesting--;
                         else if(isComment()) {
-                            return identifier;
+                            break;
                         }
-                        else if(ch ==='\n' && parenNesting===0 && bracketNesting===0) {
+                        else if(ch ==='\n' && parenNesting===0 && bracketNesting===0 && braceNesting===0) {
                             return identifier;
                         }
                         identifier+=ch;
