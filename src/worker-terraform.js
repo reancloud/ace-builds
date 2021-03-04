@@ -1439,6 +1439,8 @@ define("ace/mode/terraform/terraform_parse",[], function(require, exports, modul
             resourceFound = false,
             variableFound = false,
             localFound = false,
+            isArray=false,
+            isObject = false,
             error = function (m) {
     
                 throw {
@@ -1590,16 +1592,17 @@ define("ace/mode/terraform/terraform_parse",[], function(require, exports, modul
                             for_name+=ch;
                             next();
                         }
-                        if(for_name.length===0) {
+                        if(for_name.length===0 || for_name==='in') {
                             error("Expected variable name.");
                         }
                         white();
                         next('i');
                         next('n');
                         white();
-                        var ident = identifier();
+                        var ident = forIdentifier();
                         white();
-                        if(ident.endsWith(':') || ch===':') {
+                        if(ch===':') {
+                            next(':');
                             white();
                             if(isLetter(ch)) {
                                 while(ch) {
@@ -1615,8 +1618,25 @@ define("ace/mode/terraform/terraform_parse",[], function(require, exports, modul
                                 return;
                             }
                         }
+                        else {
+                            error("Expected ':'");
+                        }
                     }
                 }
+            },
+
+            forIdentifier = function() {
+                var identifier = '';
+                if(isLetter(ch)) {
+                    while(ch) {
+                        if(isWhitespace(ch) || ch === ':')
+                            return identifier;
+                        identifier+=ch;
+                        next();
+                    }
+                }
+                else
+                    error("Must start with a letter");
             },
 
             heredoc = function() {
@@ -1740,10 +1760,22 @@ define("ace/mode/terraform/terraform_parse",[], function(require, exports, modul
                             braceNesting++;
                         else if (ch === ')' && parenNesting>0) 
                             parenNesting--;
-                        else if (ch === ']' && bracketNesting>0)
-                            bracketNesting--;
-                        else if (ch === '}' && bracketNesting>0)
-                            braceNesting--;
+                        else if (ch === ']') {
+                            if ( bracketNesting>0)
+                                bracketNesting--;
+                            else if(isArray) {
+                                isArray=false;
+                                break;
+                            }
+                        }
+                        else if (ch === '}') {
+                            if ( braceNesting>0)
+                                braceNesting--;
+                            else if(isObject) {
+                                isObject=false;
+                                break;
+                            }
+                        }
                         else if(isComment()) {
                             break;
                         }
@@ -1939,8 +1971,10 @@ define("ace/mode/terraform/terraform_parse",[], function(require, exports, modul
             white();
             switch (ch) {
             case '{':
+                isObject = true;
                 return object();
             case '[':
+                isArray = true;
                 return array();
             case '"':
                 return string();
