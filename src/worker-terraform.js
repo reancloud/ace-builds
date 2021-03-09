@@ -1818,7 +1818,7 @@ define("ace/mode/terraform/terraform_parse",[], function(require, exports, modul
                         }
                         else if(isLetter(ch)) {
                             key = getKey();
-                            if(key === "dynamic") {
+                            if(key === "dynamic" || key === "provisioner") {
                                 var dynamic;
                                 white();
                                 if(ch === '"') {
@@ -1826,10 +1826,10 @@ define("ace/mode/terraform/terraform_parse",[], function(require, exports, modul
                                     object['dynamic'] = dynamic;
                                 }
                                 else {
-                                    error("Expected dynamic block name but found: "+ch);
+                                    error("Expected block name but found: "+ch);
                                 }
                                 if(!object.hasOwnProperty('dynamic') || object['dynamic'].length === 0) {
-                                    error("Missing dynamic block name");
+                                    error("Missing block name");
                                 }
                                 white();
                                 if (ch === '{') {
