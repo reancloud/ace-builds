@@ -35,7 +35,7 @@ var TerraformHighlightRules = function () {
             },
             {
                 token: "language.support.class",
-                regex: "\\b(timeouts|provider|connection|provisioner|lifecycleprovider|atlas|dynamic)\\b"
+                regex: "\\b(timeouts|provider|connection|provisioner|lifecycleprovider|atlas)\\b"
             },
 
             {
@@ -53,7 +53,7 @@ var TerraformHighlightRules = function () {
             },
             {
                 token: "storage.function.terraform",
-                regex: "^\\s*(locals|terraform)\\s"
+                regex: "^\\s*(locals|terraform)\\s*{"
             },
             {
                 token: "paren.lparen",
@@ -425,6 +425,7 @@ oop.inherits(Mode, TextMode);
     };
     
     this.$id = "ace/mode/terraform";
+    this.snippetFileId = "ace/snippets/terraform";
 }).call(Mode.prototype);
 
 exports.Mode = Mode;
